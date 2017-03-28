@@ -172,5 +172,46 @@
 ### class的继承
     class是通过extends关键字实现继承，这比ES5通过原型链实现继承要清晰方便很多
 
+    class Ball extends Graphics{
+        constructor(){
+            supper()
+        }
+    }
+    上面代码中，supper在这里表示父类的构造函数，用来新建父类的this对象。
+
+    子类必须在constructor方法中调用supper方法，否则新建实例时会报错。这是因为
+    子类没有自己的this对象，而是继承父类的this对象，然后对其进行加工。如果不调用
+    supper,子类就得不到this对象
+
+    class Graph{}
+    class Ball{
+        constructor(){}
+    }
+    var ball = new Ball()   //ReferenceError
+
+    ES5的继承，实质是先创建子类的实例对象this,然后再将父类的方法添加到this上面
+    (Parent.apply(this))。ES6的继承机制完全不同，实质是先创建父类的实例对象this，
+    然后再用子类的构造函数修改this（所以必须现调用supper方法);
+
+    如果子类没有定义constructor方法，这个方法会被默认添加
+    constructor(...args){
+        supper(...args);
+    }
+
+    在子类的构造函数中，只有调用supper后，才可以使用this关键字，否则会报错。这是因为
+    子类实例的创建，是基于对父类实例的加工，只有supper才能返回父类实例
+
+    class Bass extends Graph{
+        constructor(x,y){
+            this.x = x; //ReferenceError
+            supper();
+            this.x = x; //true
+        }
+    }
+
+    var ball = new Ball();
+    ball instanceof Ball    //true
+    ball instanceof Graph   //true
+    上面代码中ball同时是Ball 与Graph的实例，这与ES5的行为完全一致
 
 
