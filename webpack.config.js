@@ -10,7 +10,7 @@ module.exports = {
     },
     module: {
         loaders:[
-            { test: /\.css$/,loader:'style!css!postcss'},
+            { test: /\.css$/,loader:'style-loader!css-loader'},
             { test:/\.js$/,loader:'babel-loader',exclude:/node_modules/},
             { test: /\.less$/, loader: 'style!css!postcss!less?sourceMap'},
             //{ test: /\.(png|jpg|eot|svg|ttf|woff|woff2)$/, loader: 'url-loader?limit=8192'}
