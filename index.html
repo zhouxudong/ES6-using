@@ -2,9 +2,60 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>$Title$</title>
+    <title>index html</title>
+    <style>
+        *{
+            -webkit-box-sizing: border-box;
+            -moz-box-sizing: border-box;
+            box-sizing: border-box;
+        }
+        header, article, nav{
+            border: 1px solid #000000;
+        }
+        header{
+            display: block;
+            width: 1200px;
+            padding: 10px;
+        }
+        .clearfix:after{
+            display: block;
+            content: "*";
+            clear: both;
+        }
+        #main{
+            width: 1200px;
+            margin: 0 auto;
+
+        }
+        article{
+            float: left;
+            width: 80%;
+            height: 1000px;
+        }
+        nav{
+            float: left;
+            width:20%;
+        }
+
+    </style>
 </head>
 <body>
-$END$
+<div id="main" class="clearfix">
+    <header> 头部导航 </header>
+    <article>
+        <canvas id="mycanvas" height="300" width="958">不支持canvas</canvas>
+    </article>
+    <nav>
+        <ul>
+            <li>123</li>
+            <li>123</li>
+            <li>123</li>
+            <li>123</li>
+            <li>123</li>
+        </ul>
+    </nav>
+</div>
+<footer>footer</footer>
+<script src="/public/bundle.js"></script>
 </body>
 </html>
