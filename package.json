@@ -1,0 +1,24 @@
+{
+  "name": "zxd",
+  "version": "1.0.0",
+  "description": "ES6 webpack",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zhouxudong/ES6-using.git"
+  },
+  "keywords": [
+    "es6",
+    "webpack",
+    "module"
+  ],
+  "author": "zxd",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/zhouxudong/ES6-using/issues"
+  },
+  "homepage": "https://github.com/zhouxudong/ES6-using#readme"
+}
