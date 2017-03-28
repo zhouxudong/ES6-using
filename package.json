@@ -20,5 +20,11 @@
   "bugs": {
     "url": "https://github.com/zhouxudong/ES6-using/issues"
   },
-  "homepage": "https://github.com/zhouxudong/ES6-using#readme"
+  "homepage": "https://github.com/zhouxudong/ES6-using#readme",
+  "devDependencies": {
+    "css-loader": "^0.27.3",
+    "style-loader": "^0.16.0",
+    "webpack": "^2.3.2",
+    "webpack-dev-server": "^2.4.2"
+  }
 }
