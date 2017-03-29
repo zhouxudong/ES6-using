@@ -1,4 +1,4 @@
-# ES6 using
+# ES6 Class
 ## [class](https://github.com/zhouxudong/ES6-using/blob/master/module/graphics/ball.js)
 ### js传统方法是通过构造函数定义新对象
     function Ball(radius, color){
