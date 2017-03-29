@@ -221,13 +221,16 @@ Class作为构造函数的语法糖，同时有prototype属性和__proto__属性
 （1）子类的__proto__属性，表示构造函数的继承，总是指向父类
 （2）子类prototype属性的__proto__属性，表示方法的继承，总是指向父类的prototype属性
     ```
+
     class A{}
     class B extends A{}
     B.__proto__ === A   //true
     B.prototype.__proto__ === A.prototype   //true
+
     ```
 这样的结果上因为，类的继承上按照下面的模式实现的
     ```
+
     class A {}
     class B {}
 
@@ -238,6 +241,7 @@ Class作为构造函数的语法糖，同时有prototype属性和__proto__属性
     //B的实例继承A的静态属性
     Object.setPrototypeOf(B, A);
     const b = new B();
+
     ```
 这两条继承链，可以这样理解： 作为一个对象，子类（B）的原型（__proto__属性）上父类（A）；
 作为一个构造函数，子类（B）的原型（prototype属性）是父类的实例
