@@ -30,7 +30,7 @@ class Ball{
     }
 }
 ```
-###class完全可以看作构造函数的另一种写法。
+### class完全可以看作构造函数的另一种写法。
 ```javascript
 typeof Ball //function
 Ball === Ball.prototype.constructor //true
@@ -113,11 +113,11 @@ ball3.getBounce();  //1
 
 ### 不存在变量提升,这与ES5完全不同
 ```javascript
-    new Ball()  //ReferenceError
-    class Ball(){}
+new Ball()  //ReferenceError
+class Ball(){}
 ```
 ### Class表达式
-    与函数一样，类也可以使用表达式的形式定义
+与函数一样，类也可以使用表达式的形式定义
 ```javascript
 const Ball3D = class Ball{
     getClassName(){
