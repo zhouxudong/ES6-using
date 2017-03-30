@@ -505,6 +505,303 @@ for(let x of new Foo('hello', 'world'){
 Symbol.iterator方法返回一个Foo类的默认遍历器，for。。。of循环自动调用这个遍历器。
 
 ### Class的静态方法
+类相当于实例的原型，所有在类中定义的方法，都会被实例继承。如果在一个方法前加上`static`关键字<br>
+就表示该方法不会被实例继承，而是直接通过类来调用，这就称为"静态方法"
+
+```javascript
+class Foo {
+    static classMethod() {
+        return 'hello';
+    }
+}
+
+Foo.classMethod()   //hello
+
+var foo = new Foo();
+foo.classMethod();  //TypeError: foo.classMethod is not a function
+```
+
+父类的静态方法，可以被子类继承。
+```javascript
+class Foo {
+    static classMethod() {
+        return 'hello';
+    }
+}
+
+class Bar extends Foo {
+}
+
+Bar.classMethod();  //hello
+```
+
+静态方法也是可以从super对象上调用的。
+
+```javascript
+class Foo {
+    static classMethod() {
+        return 'hello';
+    }
+}
+
+class Bar extends Foo {
+    static classMethod() {
+        return super.classMethod() + ',too';
+    }
+}
+
+Bar.classMethod();  //hello,too
+```
+
+### Class的静态属性和实例属性
+
+静态属性指的上Class本身的属性，即`Class.propname`，而不是定义在实例对象（this)上的属性。
+```javascript
+class Foo {
+}
+
+Foo.prop = 1;
+Foo.prop    //1
+```
+上面的写法为 Foo类定义类一个静态属性prop
+
+目前，只有这种写法可行，因为ES6明确规定，Class内部只有静态方法，没有静态属性。
+
+```javascript
+class Foo {
+    prop: 2
+
+    static prop: 2
+}
+
+Foo.prop    //undefined
+```
+
+ES7有一个静态属性的提案，目前Babel转码器支持。
+
+这个提案对实例属性和静态属性，都规定类新的方法。
+
+（1）类的实例属性
+
+类的实例属性可以用等式，写入类的定义中。
+```javascript
+class MyClass {
+    myProp = 42;
+
+    constructor(){
+        console.log(this.myProp);   //42
+    }
+}
+```
+上面代码中，myProp就是 MyClass的实例属性。在MyClass的实例上，可以读取这个属性
+
+以前，我们定义实例属性，只能写在类的 constructor 方法里面。
+
+```javascript
+class ReactCounter extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = {
+            count:0
+        }
+    }
+}
+```
+上面代码中，构造方法constructor里面，定义类this.state属性。
+
+有类新的写法以后，可以不在constructor方法里面定义。
+
+```javascript
+class ReactCounter extends React.Component {
+    state = {
+        count: 0
+    }
+}
+```
+
+为了可读性的目的，对于那些在constructor里面已经定义的实例属性，新写法允许直接列出。
+```javascript
+class ReactCounter extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = {
+            count: 0
+        }
+    }
+    state;
+}
+```
+
+(2)类的静态属性
+类的静态属性只要在上面的实例属性写法前面，加上 static 关键字就可以类。
+
+```javascript
+class MyClass {
+    static myStaticProp = 2;
+
+    constructor(){
+        console.log(MyClass.myStaticProp)   //2
+    }
+}
+
+//老写法
+class Foo {}
+Foo.prop = 1;
+
+//新写法
+class Foo {
+    static prop = 1;
+}
+```
+
+### 类的私有属性
+目前有一个提案，为class加类私有属性。方法上在属性名之前，使用#表示。
+
+```javascript
+class Point {
+    #x;
+    constructor(x = 0) {
+        #x = +x;
+    }
+
+    get x() {return #x}
+    set x(value) {#x = +value}
+}
+```
+上面代码中，#x就表示私有属性x,在Point类之外上读取不到这个属性的。还可以看到<br>
+是有属性和实例的属性上可以同名的（比如 #x 与 get x()  ).
+
+私有属性可以指定初始值，在构造函数执行时进行初始化。
+
+```javascript
+class Point {
+    #x = 0;
+    constructor(){
+        #x; //0
+    }
+}
+```
+
+该提案只规定类私有属性的写法。但是，很自然的，它也可以用来写私有方法。
+```javascript
+class Foo {
+    #a;
+    #b;
+    #sum() {return #a + #b}
+    printSum {console.log(#sum());}
+    constructor(a,b) {#a = a;#b = b;}
+}
+```
+
+# new.target属性
+
+new是从构造函数生成实例的命令。ES6为new命令引入了一个new.target属性，（在构造函数中）<br>
+返回new命令作用于的那个构造函数。如果构造函数不是通过new 命令调用的,new.target会返回<br>
+undefined, 因此这个属性可以用来确定构造函数是怎么调用的。
+
+```javascript
+function Person(name) {
+    if(new.target !== undefined) {
+        this.name = name
+    }else {
+        throw new Error("必须使用new 生成实例");
+    }
+}
+
+//另一种写法
+function Person(name) {
+    if(new.target === Person) {
+        this.name = name;
+    }else{
+        throw new Error("必须使用new 生成实例");
+    }
+}
+var person = new Person('张');   //正确
+var notAperson = Person.call(person,'张');   //报错
+```
+
+上面代码确保构造函数只能通过new 命令调用。
+
+Class内部调用new.target,返回当前Class.
+```javascript
+class Rectangle {
+    constructor(length, width) {
+        console.log(new.target === Rectangle);
+        this.length = length;
+        this.width = width;
+    }
+}
+var obj = new Rectangle(3,4);   //true
+```
+需要注意的是，子类继承父类时，new.target会返回子类。
+
+```javascript
+class Rectangle {
+    constructor(length, width) {
+        console.log(new.target === Rectangle);
+        //...
+    }
+}
+class Square extends Rectangle {
+    constructor(length) {
+        super(length, length);
+    }
+}
+var obj = new Square(3);    //false
+```
+上面的代码中，new.target会返回子类
+
+利用这个特点，可以写出不能独立使用、不许继承后才能使用的类
+```javascript
+class Shape {
+    constructor() {
+        if(new.target === Shape){
+            throw new Error("本类不能实例化");
+        }
+    }
+}
+
+class Rectangle extends Shape {
+    constructor(length, width) {
+        super()
+    }
+}
+
+var x = new Shape();    //报错
+var y = new Rectangle(3, 4);    //正确
+```
+上面代码中，Shape类不能被实例化，只能用于继承。
+注意，在函数外部，使用new.target会报错
+
+### Mixin模式的实现
+Mixin模式指的是，将多个类的接口"混入"（mix in)另一个类。
+```javascript
+function mix(...mixins){
+    class Mix{}
+
+    for(let mixin of mixins) {
+        copyProperties(Mix, mixin);
+        copyProperties(Mix.prototype, mixin.prototype);
+    }
+    return Mix;
+}
+
+function copyProperties(target, source) {
+    for(let key of Reflect.ownKeys(source)){
+        if(key !== "constructor" && key !== "prototype" && key !== "name"){
+            let des = Object.getOwnPropertyDescriptor(source, key);
+            Object.defineProperty(target, key, desc);
+        }
+    }
+}
+```
+上面代码的mix函数，可以将多个对象合并称为一个类。使用的时候，只要继承这个类即可。
+
+```javascript
+class DistributeEdit extends mix(Loggable, Serializable){
+    //...
+}
+```
 
 
 
