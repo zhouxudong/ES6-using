@@ -208,7 +208,7 @@ class Ball extends Graphics{
 super,子类就得不到this对象
 ```javascript
 class Graph{}
-class Ball{
+class Ball extends Graph{
     constructor(){}
 }
 var ball = new Ball()   //ReferenceError
