@@ -266,7 +266,7 @@ const b = new B();
 Object.setPrototypeOf(B, A);
 const b = new B();
 ```
-这两条继承链，可以这样理解： 作为一个对象，子类（B）的原型（__proto__属性）上父类（A）；<br>
+这两条继承链，可以这样理解： 作为一个对象，子类（B）的原型（__proto__属性）是父类（A）；<br>
 作为一个构造函数，子类（B）的原型（prototype属性）是父类的实例
 
 ### Extends 的继承目标
