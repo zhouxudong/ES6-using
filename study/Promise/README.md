@@ -136,6 +136,55 @@ getJSON("posts.json").then( function (json) {
     console.log('error', error);
 })
 ```
+上面代码中，getJSON是对XMLHttpRequest对象的封装，用于发出一个针对JSON数据的
+HTTP请求，并且返回一个Promise对象。需要注意的是，在getJSON内部，resolve函数
+和reject函数调用时，都带有参数。
+
+如果调用resolve函数和reject函数时带有参数，那么它们的参数会被传递给回调函数。
+reject函数的参数通常是Error对象的实例；resolve函数的参数除了正常的值以外，还
+可能是另一个Promise实例，表示一个异步操作的结果可能是一个值，也可能是另一个异步
+操作，比如像下面这样。
+
+```javascript
+var p1 = new Promise(function(resolve, reject){
+    //...
+})
+var p2 = new Promise(function(resolve, reject){
+    resolve(p1);
+})
+```
+
+上面代码中，p1和p2都是Promise的实例，但是p2的resolve方法将p1作为参数，即一个异步
+操作的结果返回另一个异步事件。
+
+这是，p1的状态就会传递给p2,也就是说，p1的状态决定了p2的状态。如果p1的状态是Pending，
+那么p2的回调函数会等待p1的状态改变；如果p1的状态已经是Resolved或者Rejected，那么p2
+的回调函数将会立即执行。
+
+```javascript
+var d1 = Date.now();
+var p1 = new Promise(function (resolve, reject) {
+    setTimeout( () => reject(new Error("fail")), 3000)
+})
+var p2 = new Promise(function (resolve, reject) {
+    setTimeout( () => resolve(p1), 1000)
+})
+p2.then( result => console.log(result))
+.catch( error => {
+    console.log(error);
+
+    var d2 = Date.now();
+    console.log("time:" +  (d2 -d1 ) / 1000)
+})
+
+//Error: fail
+//time: 3.022
+
+```
+上面代码中，p1是一个Promise，3秒之后变为rejected。p2的状态在一秒之后改变，
+resolve方法返回的是p1。由于p2返回的是另一个promise,导致p2自己的状态无效了，
+由p1的状态决定p2的状态。所以，后面的then语句都变成针对p1。又过了2秒，p1变为
+rejected，导致触发catch方法的回调函数。
 
 
 
