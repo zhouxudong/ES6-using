@@ -38,6 +38,7 @@ function loadImageAsync(url) {
 }
 */
 
+//test in  ./promise_ajax.html
 var getJSON = function (url) {
     var promise = new Promise((resolve,reject) => {
         var client = new XMLHttpRequest();

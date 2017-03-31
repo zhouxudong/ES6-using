@@ -105,7 +105,7 @@ function loadImageAsync(url) {
 上面代码中，使用Promise包装了一个图片加载的异步操作。如果加载成功，就调用resolve方法，
 否则就调用reject方法
 
-下面是一个用Promise对象实现的Ajax操作的例子
+下面是一个用Promise对象实现的Ajax操作的例子 (代码)[https://github.com/zhouxudong/ES6-using/blob/master/study/Promise/promise_t1.js]
 
 ```javascript
 var getJSON = function (url) {
