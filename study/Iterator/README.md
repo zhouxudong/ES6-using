@@ -340,8 +340,107 @@ str //'hi'
 上面代码中，字符串str的Symbol.iterator方法被修改了，所以扩展运算符（...)返回的值变成了
 bye,而字符串本身还是hi
 
+## Iterator接口与Generator函数
+Symbol.iterator方法的最简单实现，还是使用Generator函数。
 
+```javascript
+//iterator_generator.js
+var myIterable = {};
 
+myIterable[Symbol.iterator] = function* (){
+    yield 1;
+    yield 2;
+    yield 3;
+};
+console.log([...myIterable])    //[1,2,3]
+
+//或采用下面的简洁写法
+let obj = {
+    * [Symbol.iterator] () {
+     yield 'hello';
+     yield 'world';
+    }
+}
+for(let x of obj){
+    console.log(x);
+}
+//hello
+//world
+```
+上面代码中，Symbol.iterator方法几乎不用部署任何代码，只用yield命令给出每一步的返回值即可。
+
+## 遍历器对象的 return(), throw()
+遍历器对象除了具有next方法，还可以具有return方法和throw方法。如果你自己写遍历器
+对象生成函数， 那么next方法是必须部署的，return和throw方法是可选的。
+
+return方法的使用场合是，如果for...of循环提前退出（通常是因为出错，或者有break语句或continue),
+就会调用return 方法。
+
+return方法必须返回一个对象，这个Generator规格决定的。
+
+## for...of循环
+
+一个数据结构只要部署了Symbol.iterator属性，就被视为具有iterator接口，就可以用for...of循环遍历
+它的成员。也就是说，for...of循环内部调用的是数据结构的Symbol.iterator方法。
+
+```javascript
+var arr = ['a', 'b', 'c', 'd'];
+
+for(let a in arr) {
+    console.log(a); //0,1,2,3
+}
+
+for(let a of arr){
+    console.log(a); //a b  c  d
+}
+```
+上面代码表明，for...in循环读取键名，for...of循环读取键值。如果要通过for...of循环，
+获取数组的索引，可以借助数组实例的entries方法和keys方法。
+
+## Set 和 Map 结构
+Set和Map结构也原生具有Iterator接口，可以直接使用for...of循环。
+
+```javascript
+//iterator_set.js
+var arr = ['a','b','c','b'];
+var engines = new Set(arr);
+for(var e of engines){
+    console.log(e);
+}
+//a
+//b
+//c
+
+var es6 = new Map();
+es6.set('edition', 6);
+es6.set('commit', 'Tc');
+for(var [name,value] of es6){
+    console.log(name + " " + value);
+}
+//edition 6
+//commit Tc
+```
+
+## 计算生成的数据结构
+
+有些数据结构是在现有数据结构的基础上，计算生成的。比如： ES6的数组、set、Map都
+部署了以下三个方法，调用后都返回遍历器对象。
+
+* entries()返回一个遍历器对象，用来遍历[键名，键值]组成的数组。Map机构的Iterator接口，
+默认就是调用entries方法。对于数组，键名就是索引值；对于Set，键名与键值相同。
+* keys()返回一个遍历器对象，用来遍历所有的键名。
+* values()返回一个遍历器对象，用来遍历所有的键值。
+
+这三个方法调用后生成的遍历器对象，所遍历的都是计算生成的数据结构。
+```javascript
+let arr = ['a','b','c'];
+for(var pair of arr.entries()){
+    console.log(pair);
+}
+//[0, 'a']
+//[1, 'b']
+//[2, 'c']
+```
 
 
 
