@@ -255,6 +255,91 @@ for(let item of iterable){
 
 ```
 
+## 调用Iterator接口的场合
+有一些场合会默认调用Iterator接口（即Symbol.iterator方法)。
+
+1。结构赋值
+对数组和Set结构进行结构赋值时，会默认调用Symbol.iterator方法。
+
+```javascript
+let set = new Set().add('a').add('b').add('c');
+let [x,y] = set;
+//x = 'a'; y = 'b'
+
+let [first, ...rest] = set;
+//first = 'a'; reset = ['b', 'c'];
+```
+2。扩展运算符
+```javascript
+var str = 'hello';
+[...str] //['h','e','l','l','o']
+
+let arr = ['b','c'];
+['a', ...arr, 'd']
+//['a','b','c','d']
+```
+
+只要某个数据结构部署类Iterator接口，就可以对它使用扩展运算符，将其转为数组
+
+`let arr = [...iterable]`
+
+3。 yield*
+yield* 后面跟的是一个可遍历的结构，它会调用该结构的遍历器接口。
+
+```javascript
+//iterator_yield.js
+let generator = function* (){
+    yield 1;
+    yield* [2,3,4];
+    yield 5;
+};
+var iterator = generator();
+
+var a = iterator.next();    // {value: 1, done: false}
+var ab = iterator.next();   // {value: 2, done: false}
+var ac = iterator.next();   // {value: 3, done: false}
+var ad = iterator.next();   // {value: 4, done: false}
+var ae = iterator.next();   // {value: 5, done: false}
+var af = iterator.next();   // {value: undefined, done: true}
+```
+4。其它场合
+由于数组的遍历会调用遍历器接口，所以任何接受数组作为参数的场合，
+其实都调用了遍历器接口。
+
+* for...of
+* Array.from()
+* Map(), Set(), WeakMap(), WeakSet()
+* Promise.all(), Promise.race()d
+
+## 字符串的Iterator接口
+字符串是一个类似数组的对象，也原生具有Iterator接口。
+
+可以覆盖原生的Symbol.iterator方法，达到修改遍历器行为的目的。
+
+```javascript
+//iterator_string.js
+var str = new String('hi');
+[...str]    //['h','i']
+
+str[Symbol.iterator] = function(){
+    return {
+        next: function(){
+            if(this._first){
+                this._first = false;
+                return {value: "bye", done: false};
+            }else {
+                return {done: true}
+            }
+        },
+        _first: true
+    }
+}
+[...str]    //['bye']
+str //'hi'
+```
+上面代码中，字符串str的Symbol.iterator方法被修改了，所以扩展运算符（...)返回的值变成了
+bye,而字符串本身还是hi
+
 
 
 
