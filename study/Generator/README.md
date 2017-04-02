@@ -96,6 +96,96 @@ function* demo(){
 }
 ```
 
+## 与Iterator接口的关系
+任意一个对象的Symbol.iterator方法，等于该对象的遍历器生成函数，调用
+该函数会返回该对象的一个遍历器对象。
+
+由于Generator函数就是遍历器生成函数，因此可以把Generator赋值给对象的Symbol.iterator
+属性，从而使得该对象具有Iterator接口。
+
+```javascript
+var myIterable = {};
+myIterable[Symbol.iterator] = function* () {
+    yield 1;
+    yield 2;
+    yield 3;
+}
+
+[...myIterable] //[1,2,3]
+```
+上面代码中，Generator函数赋值给Symbol.iterator属性，从而使得myIterable对象具有了
+Iterator接口，可以被...运算符遍历了。
+
+Generator函数执行后，返回一个遍历器对象。该对象本身也具有Symbol.iterator属性，
+执行后返回自身。
+```javascript
+function* gen(){
+    //...
+}
+var g = gen();
+g[Symbol.iterator]() === g
+```
+上面代码中，gen是一个Generator函数，调用它会生成一个遍历器对象g。它的Symbol.iterator
+属性，也是一个遍历器对象生成函数，执行后返回它自己。
+
+## next方法的参数
+yield语句本身没有返回值，或者说总是返回undefined。next方法可以带一个参数，该参数就会
+被当作上一个yield语句的返回值。
+
+```javascript
+//03-generator-nextParam.js
+function *f() {
+    for(var i = 0; true; i++){
+        var reset = yield i;
+        if(reset) {i = -1}
+    }
+}
+var g = f();
+console.log(g.next());      // {value: 0, done: false}
+console.log(g.next());      // {value: 1, done: false}
+console.log(g.next(true));  // {value: 0, done: false}
+console.log(g.next());      // {value: 1, done: false}
+```
+上面代码先定义了一个可以无限运行的Generator函数f,如果next方法没有参数，
+每次运行到yield语句，变量reset的值总是undefined。当next方法带一个参数
+true时，变量reset就被重置为这个参数（即true)，因此i会等于-1,下一轮循环就会从-1开始递增。
+
+这个功能有很重要的语法意义。Generator函数从暂停状态到恢复运行，它的上下问状态(context)
+是不变的。通过next方法的参数，就有办法在Generator函数开始运行之后，继续向函数体内部注入值。
+也就是说，可以在Generator函数运行的不同阶段，从外部向内部注入不同的值，从而调整函数行为。
+
+```javascript
+//04-generator-next-2.js
+function *foo(x) {
+    var y = 2 * (yield (x + 1));
+    var z = yield (y / 3);
+    return (x + y + z);
+}
+var a = foo(5);
+console.log(a.next()); // {value: 6, done: false}
+console.log(a.next()); // {value: NaN, done: false}
+console.log(a.next()); // {value: NaN, done: true}
+
+var b = foo(5);
+console.log(b.next());  // {value: 6, done: false}
+console.log(b.next(12));// {value: 8, done: false}
+console.log(b.next(13));// {value: 42, done: true}
+```
+上面代码中，第二次运行next方法的时候不带参数，导致y的值等于 2 * undefined(即NaN),
+除以3以后还是NaN,因此返回对象的value属性也等于NaN。第三次运行next方法的时候不带参数，
+所以z等于undefined,返回对象的value属性等于 5 + NaN + undefined,即NaN。
+
+如果向next方法提供参数，返回结果就完全不一样了。上面代码第一次调用b的next方法时，
+返回x+1的值6；第二次调用next方法，将上一次yield语句的值设为12，因此y等于24，返回y/3的值8;
+第三次调用next方法，将上一次yield语句的值设为13,因此z等于13，这是x=5,y=24,所以return语句
+的值等于 5 + 24 + 13 = 42;
+
+注意，由于next方法的参数表示上一个yield语句的返回值，所以第一次调用next方法时，不能带有参数。
+V8引擎直接忽略第一次使用next方法时的参数，只有从第二次使用next方法开始，参数才是有效的。从
+语义上讲，第一个next方法用来启动遍历器对象，所以不用待参数。
+
+如果想要第一次调用next方法时，就能够输入值，可以在Generator函数外面再包一层。
+
 
 
 
