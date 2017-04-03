@@ -359,6 +359,110 @@ console.log(g.next())       // {value: 7, done: true}
 上面代码中，调用return方法后，就开始执行finally代码块，然后等到
 finally代码块执行完，再执行return方法。
 
+## yield* 语句
+如果在Generator函数内部，调用另一个Generator函数，默认情况下是没有效果的。
+```javascript
+function* foo(){
+    yield 'a';
+    yield 'b';
+}
+function* bar(){
+    yield 'x'
+    foo();
+    yield 'y';
+}
+for(let v of bar()){
+    console.log(v);
+}
+// 'x'
+// 'y'
+```
+上面代码中，foo和bar都是Generator函数，在bar里面调用foo,是不会有效果的。
+
+这个就需要用到yield*语句，用来在一个Generator函数里面执行另一个Generator函数。
+```javascript
+function * foo() {
+    yield 'a';
+    yield 'b';
+}
+
+function * bar() {
+    yield 'x';
+    yield* foo();
+    yield 'y';
+}
+
+for(let a of bar()){
+    console.log(a)  //x  a  b  y
+}
+```
+
+再来看一个对比的例子
+```javascript
+function * inner() {
+    yield 'hello';
+}
+function * outer1() {
+    yield 'open';
+    yield inner();
+    yield 'close';
+}
+var gen = outer1();
+console.log(gen.next());    // 'open'
+console.log(gen.next());    // 返回一个遍历器对象
+console.log(gen.next());    // 'close'
+
+function * outer2() {
+    yield 'open';
+    yield* inner();
+    yield 'close';
+}
+
+var gen = outer2();
+console.log(gen.next());    // 'open'
+console.log(gen.next());    // 'hello'
+console.log(gen.next());    // 'close'
+```
+上面例子中，outer2使用了yield*, outer1没使用。结果就是，outer1返回一个遍历器
+对象，outer2返回该遍历器对象的内部值。
+
+如果yield* 后面跟着一个数组，由于数组原生支持遍历器，因此就会遍历数组成员。
+
+```javascript
+function* gen(){
+    yield* ['a', 'b', 'c'];
+}
+gen().next()    //{value: 'a', done: false}
+```
+上面代码中，yield命令后面如果不加星号，返回的是整个数组，加了星号就表示返回的
+是数组的遍历器对象。实际上，任何数据结构只要有Iterator接口，就可以被yield*遍历。
+
+如果被代理的Generator函数有return语句，那么就可以向代理它的Generator函数返回数据。
+```javascript
+//11-generator-yield*-return.js
+function * foo() {
+    yield 2;
+    yield 3;
+    return 'foo';
+}
+
+function * bar() {
+    yield 1;
+    var v = yield *foo();
+    console.log("v:" + v);
+    yield 4;
+}
+var it = bar();
+console.log(it.next()); // {value: 1, done: false}
+console.log(it.next()); // {value: 2, done: false}
+console.log(it.next()); // {value: 3, done: false}
+console.log(it.next());
+// "v: foo"
+// {value: 4, done: false}
+console.log(it.next()); // {value: undefined, done: true}
+```
+上面代码在第四次调用next方法的时候，屏幕上会有输出，这是因为函数foo的return
+语句，向函数提供了返回值。
 
 
 
