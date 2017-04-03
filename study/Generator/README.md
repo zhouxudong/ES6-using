@@ -464,6 +464,171 @@ console.log(it.next()); // {value: undefined, done: true}
 上面代码在第四次调用next方法的时候，屏幕上会有输出，这是因为函数foo的return
 语句，向函数提供了返回值。
 
+yield*命令可以很方便的去除嵌套数组的所有成员
+```javascript
+//12-generator-iterat-all.js
+//下面是二叉树的构造函数
+//三个参数分别是左树、当前节点和右树
+function Tree(left, label, right) {
+    this.left = left;
+    this.label = label;
+    this.right = right;
+}
+
+//下面是中序（inorder)遍历函数。
+//由于返回的是一个遍历器，所以要用generator函数。
+//函数体内采用递归算法，所以左树和右树要用到yield*遍历
+function * inorder(t) {
+    if(t){
+        yield* inorder(t.left);
+        yield t.label;
+        yield* inorder(t.right);
+    }
+}
+
+//下面生成二叉树
+function make(array) {
+    //判断是否为叶节点
+    if(array.length == 1) return new Tree(null, array[0], null);
+    return new Tree(make(array[0]), array[1], make(array[2]))
+}
+
+let tree = make([[['a'], 'b', ['c']], 'd', [['e'], 'f', ['g']]]);
+
+//遍历二叉树
+var result = [];
+for(let node of inorder(tree)){
+    result.push(node);
+}
+console.log(result);
+//[ 'a', 'b', 'c', 'd', 'e', 'f', 'g' ]
+```
+
+## 作为对象属性的Generator函数
+如果一个对象的属性是Generator函数，可以简写成下面的形式
+```javascript
+let obj = {
+    * myGeneratorMethod(){
+        ...
+    }
+}
+```
+上面代码中，myGeneratorMethod属性前面有一个星号，表示这个属性是一个Generator函数。
+
+它的完整形式如下，与上面的写法是等价的。
+
+```javascript
+let obj = {
+    myGeneratorMethod: function* (){
+        ...
+    }
+}
+```
+
+## Generator函数的this
+Generator函数总是返回一个遍历器，ES6规定这个遍历器是Generator函数的实例，也继承了
+Generator函数的prototype对象上的方法。
+
+```javascript
+function* g(){}
+
+g.prototype.hello = function(){
+    return 'hi';
+}
+
+let obj = g();
+obj instanceof g //true
+obj.hello() //'hi'
+```
+上面代码表明，Generator函数g返回的遍历器obj，是g的实例，而且继承了g.prototype。
+但是，如果把g当作普通的构造函数，并不会生效，因为g返回的总是遍历器对象，而不是this对象。
+
+```javascript
+function* g(){
+    this.a = 11;
+}
+var obj = g();
+obj.a       //undefined
+```
+上面代码中，Generator函数g在this对象上面添加了一个属性a,但是obj对象拿不到这个属性。
+
+Generator函数也不能跟new命令一起用，会报错。
+
+```javascript
+function* F(){
+    yield this.x = 2;
+    yield this.y = 3;
+}
+new F();
+//TypeError: F is not a constructor
+```
+上面代码中，new命令跟构造函数F一起使用，结果报错，因为F不是 构造函数。
+
+下面代码让Generator函数返回一个正常的对象实例，既可以用next方法，🈶️可以获得正常的this。
+```javascript
+function* F(){
+    this.a = 1;
+    yield this.b = 2;
+    yield this.c = 3;
+}
+var obj = {};
+var f = F.call(obj);
+
+f.next();   //{ value: 2, done: false}
+f.next();   //{ value: 3, done: false}
+f.next();   //{ value: undefined, done: true}
+
+obj.a   //1
+obj.b   //2
+obj.c   //3
+```
+上面代码中，首先是F内部的this对象绑定obj对象，然后调用它，返回一个Iterator对象。这个对象
+执行三次next方法（因为F内部有两个yield语句),完成F内部所有代码的运行。这是，所有内部属性
+都绑定在obj对象上了，因此obj对象也就成了F的实例。
+
+上面代码中，执行的是遍历器对象f,但是生成的对象实例是obj,有没有办法将这两个对象统一呢？
+
+一个办法就是将obj换成F.prototype.
+
+```javascript
+function* F(){
+    this.a = 1;
+    yield this.b = 2;
+    yield this.c = 3;
+}
+var f = F.call(F.prototype);
+
+f.next();   //{ value: 2, done: false}
+f.next();   //{ value: 3, done: false}
+f.next();   //{ value: undefined, done: true}
+
+f.a   //1
+f.b   //2
+f.c   //3
+```
+再将F改成构造函数，就可以对它执行new命令了。
+```javascript
+function* gen(){
+    this.a = 1;
+    yield this.b = 2;
+    yield this.c = 3;
+}
+function F(){
+    return gen.call(gen.prototype);
+}
+
+var f = new F();
+f.next();   //{ value: 2, done: false}
+f.next();   //{ value: 3, done: false}
+f.next();   //{ value: undefined, done: true}
+
+f.a   //1
+f.b   //2
+f.c   //3
+```
+
+
+
 
 
 
