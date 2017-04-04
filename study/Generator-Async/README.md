@@ -130,6 +130,108 @@ result.value.then(function (data) {
 可以看到，虽然Generator函数将异步操作表示的很简洁，但是流程管理却不方便（即何时执行第一阶段，
 何时执行第二阶段）。
 
+## Thunk函数
+Thunk函数是自动执行Generator函数的一种方法。
+
+## 参数的求值策略
+求值策略的争论有两种。
+* 一种是"传值调用"（call by value),即在进入函数体前，就计算参数表达式的值，再将值传入函数。 C
+* 另一种是"传名调用"（call by name),即直接将参数表达式传入参数，只在用它时求值。 Haskell
+
+```javascript
+function f(a,b){
+    return b;
+}
+f(3 * x * x - 2 * x -1, x);
+```
+上面代码中，函数f的第一个参数是一个复杂的表达式，但是函数体内根本没用到。对这个参数求值，实际上
+是不必要的。因此，有一些计算机学家倾向与"传名调用"，即只在执行时求值。
+
+## Thunk函数的含义
+编译器的"传名调用"实现，往往是将参数放到一个临时函数之中，再将这个临时函数传入函数体。
+这个临时函数就叫做Thunk函数。
+```javascript
+function f(m){
+    return m * 2;
+}
+f(x + 5);
+
+//等同于
+
+var thunk = function(){
+    return x + 5;
+}
+function f(thunk){
+    return thunk() * 2;
+}
+```
+上面代码中，函数f的参数x+5被一个函数替换了。凡是用到原参数的地方，对Thunk函数求值即可。
+
+这就是Thunk函数的定义，它是"传名参数"的一种实现策略，用来替换某个表达式。
+
+## JavaScript语言的Thunk函数
+Javascript语言是传值调用，它的Thunk函数含义有所不同。在Javascript语言中，Thunk函数替换
+的不是表达式，而是多参数函数，将其替换成一个只接受回调函数作为参数的但参数函数。
+
+```javascript
+//正常版本的readFile(多参数版本）
+fs.readFile(fileName, callback);
+
+//Thunk版本的readFile(单参数版本）
+var thunk = function(fileName){
+    return function(callback){
+        return fs.readFile(fileName, callback);
+    }
+}
+
+var readFileThunk = thunk(fileName);
+readFileThunk(callback);
+```
+上面代码中,fs模块的readFile方法是一个多参数函数，两个参数分别为文件名和回调
+函数。经过转化器处理，它变成了一个单参数函数，只接受回调函数作为参数。这个参数
+版本，就叫做Thunk函数。
+
+任何函数，只要参数有回调函数，就能写成Thunk函数的形式。下面是一个简单的Thunk函数转换器。
+
+```javascript
+//ES5版本
+var Thunk = function(fn){
+    return function(){
+        var args = Array.prototype.slice.call(arguments);
+        return function(callback){
+            args.push(callback);
+            return fn.apply(this, args);
+        }
+    }
+}
+
+//ES6版本
+var Thunk = function(fn){
+    return function(...args){
+        return function(callback){
+            return fn.call(this, ...args, callback);
+        }
+    }
+}
+```
+使用上面的转换器，生成fs.readFile的Thunk函数。
+```javascript
+var readFileThunk = Thunk(fs.readFile);
+readFileThunk(fileA)(callback);
+```
+
+下面是一个完整的例子。
+
+```javascript
+//04-generator-thunk.js
+function f(a,cb){
+    cb(a);
+}
+
+let ft = Thunk(f);
+let log = console.log.bind(console);
+ft("a")(log)  // a
+```
 
 
 
