@@ -362,6 +362,52 @@ Thunk函数并不是Generator函数自动执行的唯一方案。因为自动执
 自动控制Generator函数的流程，接收和交还程序的执行权。回调函数可以做到这一点，Promise
 对象也可以。
 
+## co 模块用于Generator函数的自动执行。
+
+下面是一个Generator函数，用于依次读取两个文件。
+
+```javascritp
+//08-generator-co.js
+
+var gen = function* (){
+    var f1 = yield readFile("../data1.json");
+    var f2 = yield readFile("../data2.json");
+
+    console.log(f1.toString());
+    console.log(f2.toString());
+}
+```
+co模块可以让你不用编写Generator函数的执行器。
+```javascript
+var co = require("co");
+co(gen);
+```
+上面代码中，Generator函数只要传入co函数，就会自动执行。
+
+co函数返回一个Promise对象，因此可以用then方法添加回调函数。
+
+```javascript
+co(gen).then(function () {
+    console.log("Generator函数执行完成")
+});
+```
+
+## co模块的原理
+前面说过，Generator就是一个异步操作的容器。它的自动执行需要一种机制，当异步操作有了结果，
+就能自动交回执行权。
+
+两种方法可以做到这一点。
+
+1。回调函数。将异步操作包装成Thunk函数，在回调函数里面交回执行权。
+
+2。Promise对象。将异步操作包装成Promise对象，用then方法交回执行权。
+
+co模块其实就是将两种自动执行器（Thunk函数和Promise对象）,包装成一个模块。使用co的前提
+条件是，Generator函数的yield命令后面，只能是Thunk函数或Promise对象。如果数组或对象
+的成员，全部都是Promise对象，也可以使用co。
+
+## 基于Promise对象的自动执行
+还是沿用上面的例子。首先，把fs模块的readFile方法包装成一个Promise对象。
 
 
 
