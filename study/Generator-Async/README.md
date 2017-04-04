@@ -406,8 +406,121 @@ co模块其实就是将两种自动执行器（Thunk函数和Promise对象）,�
 条件是，Generator函数的yield命令后面，只能是Thunk函数或Promise对象。如果数组或对象
 的成员，全部都是Promise对象，也可以使用co。
 
-## 基于Promise对象的自动执行
-还是沿用上面的例子。首先，把fs模块的readFile方法包装成一个Promise对象。
+## (基于Promise对象的自动执行)[https://github.com/zhouxudong/ES6-using/blob/master/study/Generator-Async/09-generator-promise.js]
+
+## co模块的源码
+
+首先，co函数接受Generator函数作为参数，返回一个Promise对象。
+```javascript
+function co(gen){
+    var ctx = this;
+
+    return new Promise(function(resolve, reject){
+    })
+}
+```
+
+在返回到Promise对象里面，co先检查参数gen是否为Generator函数。如果是，就执行该函数，
+得到一个内部指针对象；如果不是就返回，并将Promise对象的状态改为resolved.
+
+```javascript
+function co(gen){
+    var ctx = this;
+
+    return new Promise(function(resolve, reject){
+        if(typeof gen === 'function') gen = gen.call(ctx);
+        if(!gen || typeof gen.next !== 'function') return resolve(gen);
+    })
+}
+```
+接着，co将Generator函数的内部指针对象的next方法，包装成onFulfilled函数。
+这主要是为了能够捕捉抛出的错误。
+
+```javascript
+function co(gen){
+    var ctx = this;
+
+    return new Promise(function(resolve, reject){
+        if(typeof gen === 'function') gen = gen.call(ctx);
+        if(!gen || typeof gen.next !== 'function') return resolve(gen);
+
+        onFulfilled();
+        function onFulfilled(res){
+            var ret;
+            try{
+                ret = gen.next(res);
+            }catch(e){
+                return reject(e);
+            }
+            next(ret);
+        }
+    })
+}
+```
+最后，就是关键的next函数，它会反复调用自身。
+```javascript
+function next(ret){
+    if(ret.done) return resolve(ret.value);
+    var value = toPromise.call(ctx, ret.value);
+    if(value && isPromise(value)) return value.then(onFulfilled, onRejected);
+    return onRejected(
+        new TypeError(
+            'You may only yield a function, promise, generator, array, or object,'
+            + 'but the following object was passed:"'
+            + String(ret.value)
+            + '"'
+        )
+    )
+}
+```
+上面代码中，next函数的内部代码，一共只有四行命令。
+
+第一行，检查当前是否为Generator函数的最后一步，如果是就返回。
+
+第二行，确保每一步的返回值，是Promise对象。
+
+第三行， 使用then方法，为返回值加上回调函数，然后通过onFulfilled函数再次调用next函数。
+
+第四行， 在参数不符合要求的情况下（参数非Thunk函数和Promise对象），将Promise对象的状态
+改为rejected,从而终止执行。
+
+## 处理并发的异步操作
+co支持并发的异步操作，即允许某些操作同时进行，等到它们全部完成，才进行下一步。
+
+这时，要把并发的操作都放在数组或对象里面，跟在yield语句后面。
+```javascript
+//数组的写法
+co(function* (){
+    var res = yield [
+        Promise.resolve(1),
+        Promise.resolve(2)
+    ];
+    console.log(res);
+}).catch(onerror);
+
+//对象的写法
+co(function* (){
+    var res = yield {
+        1: Promise.resolve(1),
+        2: Promise.resolve(2)
+    };
+    console.log(res);
+}).catch(onerror);
+```
+
+下面是另一个例子
+```javascript
+co(function* (){
+    var values = [n1, n2, n3];
+    yield values.map(somethingAsync);
+})
+
+function* somethingAsync(x){
+    //do something async
+    return y
+}
+```
+上面的代码允许并发三个somethingAsync异步操作，等到它们全部完成，才会进行下一步。
 
 
 
