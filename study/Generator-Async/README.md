@@ -233,6 +233,136 @@ let log = console.log.bind(console);
 ft("a")(log)  // a
 ```
 
+## Thunkify模块
+生产环境的转换器，建议使用Thunkify模块。
+
+使用方式如下。
+```javascript
+// 05-generator-thunkify.js
+var thunkify = require("thunkify");
+var fs = require("fs");
+
+var read = thunkify(fs.readFile);
+
+read('README.md')(function (err, str) {
+    //...
+})
+```
+
+## Generator函数的流程管理
+
+Generator函数可以自动执行。
+
+```javascript
+function* gen(){
+    //...
+}
+var g = gen();
+var res = g.next();
+
+while(!res.done){
+    console.log(res.value);
+    res = g.next();
+}
+```
+上面代码中，Generator函数gen会自动执行完所有步骤
+
+但是，这不适合异步操作。如果必须保证前一步执行完，才能执行后一步，上面的自动
+执行就不可行。这时，Thunk函数就能派上用处。以读取文件为例。
+
+下面的Generator函数封装了两个异步操作。
+
+```javascript
+//06-generator-thun-auto.js
+var fs = require("fs");
+var thunkify = require("thunkify");
+var readFileThunk = thunkify(fs.readFile);
+
+var gen = function* (){
+    var r1 = yield readFileThunk('../data2.json');
+    console.log(r1.toString());
+    var r2 = yield readFileThunk('../data1.json');
+    console.log(r2.toString());
+
+}
+```
+上面代码中，yield命令用于将程序的执行权移出Generator函数，那么就需要一种方法，
+将执行权再交还给Generator函数。
+
+这种方法就是Thunk函数，因为它可以在回调函数里，将执行权还给Generator函数。
+为了便于理解，我们先看如何手动执行上面这个Generator函数。
+
+```javascript
+var g = gen();
+var r1 = g.next();
+r1.value(function(err, data){
+    if(err) throw err;
+    var r2 = g.next(data);
+
+    r2.value(function (err, data) {
+        if(err) throw err;
+        g.next(data);
+    })
+})
+```
+
+上面代码中，变量g是Generator函数的内部指针，表示目前执行到那一步。next方法负责
+将指针移动到下一步，并返回改不的信息(value属性和done属性）。
+
+仔细查看上面的代码，可以发现Generator函数的执行过程，其实是将同一个回调函数，
+反复传入next方法的value属性。这使得我们可以用递归来自动完成这个过程。
+
+## Thunk 函数的自动流程管理
+
+Thunk函数真正的威力，在于可以自动执行Generator函数。下面就是一个基于Thunk函数的
+Generator执行器。
+
+```javascript
+//07-generator-thunk-recursion.js
+function run(fn){
+    var gen = fn();
+
+    function next(err, data){
+        var result = gen.next(data);
+
+        if(result.done) return;
+        result.value(next);
+    }
+
+    next();
+}
+function* g(){
+    //...
+}
+run(g);
+```
+上面代码的run函数，就是一个Generator函数的自动执行器。内部的next函数就是Thunk
+的回调函数。next函数先将指针移到Generator函数的下一步(gen.next方法），然后判断
+Generator函数是否结束（result.done），如果没结束，就将next函数再传入Thunk
+函数（result.value),否则就直接退出。
+
+有了这个执行器，执行Generator函数方便多了。不管内部有多少个异步操作，直接把Generator
+函数传入run函数即可。当然，前提是每一个异步操作，都要是Thunk函数，也就是说，跟在yield
+命令后面的必须是Thunk函数。
+
+```javascript
+var g = function* (){
+    var f1 = yield readFile('fileA');
+    var f2 = yield readFile('fileB');
+    //...
+    var fn = yield readFile('fileN');
+}
+
+run(g);
+```
+上面代码中，函数g封装了n个异步操作，只要执行run函数，这些操作就会自动完成。这样一来，
+异步操作不仅可以写的像同步操作，而且一行代码就可以执行。
+
+Thunk函数并不是Generator函数自动执行的唯一方案。因为自动执行的关键是，必须有一种机制，
+自动控制Generator函数的流程，接收和交还程序的执行权。回调函数可以做到这一点，Promise
+对象也可以。
+
+
 
 
 
