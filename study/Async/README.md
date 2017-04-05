@@ -67,5 +67,21 @@ async函数的返回值是Promise对象，这比Generator函数的返回值是It
 内部then命令的语法糖。
 
 
+## 基本用法
+
+async函数返回一个Promise对象，可以使用then方法添加回调函数。当函数执行的时候，一旦遇到
+await就会先返回，等到异步操作完成，再接着执行函数体内后面的语句。
+
+下面是一个例子。
+```javascript
+async function getStockPriceByName(name){
+    var symbol = await getStockSymbol(name);
+    var stockPrice = await getStockPrice(symbol);
+
+    return stockPrice;
+}
+```
+
+
 
 
