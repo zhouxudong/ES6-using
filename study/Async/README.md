@@ -80,7 +80,127 @@ async function getStockPriceByName(name){
 
     return stockPrice;
 }
+getStockPriceByName("good").then(function (result){
+    console.log(result);
+})
 ```
+上面代码是一个获取股票报价的函数，函数前面的async关键字，表明该函数内部有异步操作。
+调用该函数时，会立即返回一个Promise对象。
+
+下面是另一个例子，指定多少毫秒后输出一个值。
+```javascript
+//02-async-timeout.js
+function timeout(ms) {
+    return new Promise( resolve => {
+        setTimeout(resolve, ms);
+    })
+}
+
+async function asyncPrint(value, ms) {
+    await timeout(ms);
+    console.log(value);
+}
+asyncPrint("hello world", 1000);
+```
+上面代码指定1秒后输出"hello world".
+
+由于async函数返回的是Promise对象，可以作为await命令的参数。所以，上面的例子也可以
+写成下面的形式。
+```javascript
+//03-async-promise.js
+async function timeout(ms) {
+    await new Promise(resolve => {
+        setTimeout(resolve, ms);
+    })
+}
+
+async function asyncPrint(value, ms) {
+    await timeout(1000);
+    console.log(value);
+}
+
+asyncPrint("hello world", 1000);
+```
+async函数有多种使用形式。
+
+```javascript
+//函数声明
+async function foo() {}
+
+//函数表达式
+const foo = async function() {};
+
+//对象的方法
+let obj = {async foo(){}};
+obj.foo().then(...)
+
+//箭头函数
+const foo = async () => {}
+
+//class的方法
+class Storage {
+    constructor(){
+        this.cachePromise = caches.open('avatars');
+    }
+
+    async getAvatar(name) {
+        const cache = await this.cachePromise;
+        return cache.match(`/avatars/${name}.jpg`);
+    }
+}
+
+const storage = new Storage();
+storage.getAvatar('jake').then(...);
+```
+
+## 返回Promise对象
+async函数返回一个Promise对象。
+
+async函数内部return语句返回的值，会成为then方法回调函数的参数。
+```javascript
+//04-async-return-param.js
+async function f() {
+    return 'hello world'
+}
+
+f().then( v => console.log(v));
+// 'hello world'
+```
+
+上面代码中，函数f内部return 命令返回的值，会被then方法回调函数接收到。
+
+async函数内部抛出错误，会导致返回的Promise对象变为reject状态。抛出的错误对象
+会被catch方法回调函数接收到。
+
+```javascript
+//05-async-throw-param.js
+async function f() {
+    throw new Error("find error");
+}
+
+f().then(
+    v => console.log(v),
+    e => console.log(e)
+)
+// finde error
+```
+## Promise对象的状态化
+
+async函数返回的Promise对象，必须等到内部所有await命令后面的Promise对象执行完，
+才会发生状态改变，除非遇到return语句或抛出错误。也就是说，只有async函数内部的
+异步执行完，才会执行then方法指定的回调函数。
+
+下面是一个例子。
+```javascript
+async function getTitle(url) {
+    let response = await fetch(url);
+    let html = await response.text();
+    return html.match(/<title>([\s\S]+)<\/title>/i)[1];
+}
+getTitle('https://tc39.github.io/ecma262/').then(console.log);
+```
+上面代码中，函数getTitle内部有三个操作：抓取网页、取出文本、匹配页面标题。只有这三个
+操作全部完成，才会执行then方法里面的console.log。
 
 
 
