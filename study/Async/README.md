@@ -202,6 +202,156 @@ getTitle('https://tc39.github.io/ecma262/').then(console.log);
 上面代码中，函数getTitle内部有三个操作：抓取网页、取出文本、匹配页面标题。只有这三个
 操作全部完成，才会执行then方法里面的console.log。
 
+## await命令
+正常情况下，await命令后面是一个Promise对象。如果不是，会被转成一个立即resolve的Promise对象。
+```javascript
+async function f(){
+    return await 123;
+}
+f().then( v => console.log(v))
+//123
+```
+上面代码中，await命令的参数是数值123，它被转成Promise对象，并立即resolve。
+
+await命令后面的Promise对象如果变为reject状态，则reject的参数会被catch方法的回调
+函数接收到。
+```javascript
+async function f(){
+    await Promise.reject("error");
+}
+f()
+.then( v => console.log(v))
+.then( e => console.log(e))
+//error
+```
+上面代码中，await语句前面没有return，但是reject方法的参数依然传入了catch方法的回调函数。
+这里如果在await前面加上return，效果一样。
+
+只要一个await语句后面的Promise变为reject,那么整个async函数都会中断执行。
+
+```javascript
+async function f() {
+    await Promise.reject('error');
+    await Promise.resolve("hello world");//不会执行
+}
+```
+上面代码中，第二个await 语句是不会执行的，因为第一个await语句状态变成了reject。
+
+有时，我们希望即使前一个异步操作失败，也不要中断后面的异步操作。这时可以将第一个await
+放在try...catch结构里面，这样不管这个异步操作是否成功，第二个await都会执行。
+
+```javascript
+async function f(){
+    try {
+        await Promise.reject("error");
+    }catch(e){
+    }
+    return await Promise.resolve('hello world');
+}
+f().then( v => console.log(v));
+// hello world
+```
+另一种方法是await后面的Promise对象再跟一个catch方法，处理前面可能出现的错误。
+
+```javascript
+async function f() {
+    await Promise.reject('出错')
+        .catch(e => console.log(e));
+    return await Promise.resolve('hello world');
+}
+f().then(v => console.log(v));
+//出错
+//hello world
+```
+
+多个await命令后面的异步操作，如果不存在继发关系，最好让他们同时触发。
+
+```javascript
+//写法一
+let [foo, bar] = await Promise.all([getFoo(), getBar()]);
+
+//写法二
+let fooPromise = getFoo();
+let barPromise = getBar();
+let foo = await fooPromise;
+let bar = await barPromise;
+```
+上面两种写法，getFoo和getBar都是同时触发，这样就会缩短程序的执行时间。
+
+## async函数的实现原理
+async函数的实现原理，就是将Generator函数和自动执行器，包装在一个函数里。
+
+```javascript
+async function fn(args){
+    //...
+}
+
+//等同于
+
+function fn(args) {
+    return spawn(function* (){
+        //...
+    })
+}
+```
+所有async函数都可以写成上面的第二种形式，其中的spawn函数就是自动执行器。
+
+下面是spawn函数的实现。
+```javascript
+function spawn(genF) {
+    return new Promise(function(resolve, reject){
+        var gen = genF();
+        function step(nextF){
+            try{
+                var next = nextF();
+            }catch(e){
+                return reject(e);
+            }
+            if(next.done) {
+                return resolve(next.value);
+            }
+            Promise.resolve(next.value).then(function(v){
+                step(function(){ return gen.next(v); });
+            }, function(e){
+                step(function(){ return gen.throw(e); })
+            });
+        }
+        step(function() {return gen.next(undefined); })
+    })
+}
+```
+
+## 按顺序完成异步操作
+实际开发中，经常遇到一组异步操作，需要按照顺序完成。比如，依次远程读取一组
+URL，然后按照读取的顺序输出结果。
+
+```javascript
+async function logInOrder(urls) {
+    for(const url of urls) {
+        const response = await fetch(url);
+        console.log(await response.text());
+    }
+}
+```
+上面代码的问题是所有远程操作都是继发。只有前一个url返回结果，才会去读取下一个url,
+这样作效率很差，非常浪费时间。我们需要的是并发发出远程请求。
+
+```javascript
+async function logInOrder(urls) {
+    //并发读取远程URL
+    const textPromise = urls.map(async url => {
+        const response = await fetch(url);
+        return response.text();
+    })
+
+    //按次序输出
+    for(const textPromise of textPromises) {
+        console.log(await textPromise);
+    }
+}
+```
+上面代码中，虽然map方法的参数是async函数，但它是并发执行的，因为只有async函数内部是继发执行，
+外部不受影响。后面的for...of循环内部使用了await，因此实现了按顺序输出。
 
 
 
