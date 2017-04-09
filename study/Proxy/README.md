@@ -426,7 +426,99 @@ console.log(Reflect.apply(proxy, null, [9,10]));    //38
 ```
 上面代码中，每当执行proxy函数（直接调用或call或apply调用),就会被apply方法拦截。
 
+## has()
+has方法用来拦截HasProperty操作，即判断对象是否具有某个属性时，这个方法会生效。
+典型的操作就是in运算符。
 
+下面的例子使用has方法隐藏某些属性，不被in运算符发现。
+
+```javascript
+//11-proxy-has.js
+var handler = {
+    has(target, key){
+        if(key[0] === "_"){
+            return false;
+        }
+        return key in target;
+    }
+};
+var target = {_prop: 'bar', prop: 'foo'};
+var proxy = new Proxy(target, handler);
+
+console.log('_prop' in proxy);  //false
+```
+上面代码中，如果原对象的属性名的第一个字符是下划线，proxy.has就会返回false，
+从而不会被in运算符发现。
+
+如果原对象不可配置或禁止扩展，这是has拦截会报错。
+```javascript
+//12-proxy-has-preventEx.js
+var obj = {a:10};
+Object.preventExtensions(obj);
+
+var p = new Proxy(obj, {
+    has: function (target, prop) {
+        return false;
+    }
+})
+
+'a' in p    //TypeError is throw
+```
+上面代码中，obj对象禁止扩展，结果使用has拦截就会报错。也就是说，如果某个属性
+不可配置（或者目标对象不可扩展），这has方法就不得"隐藏"（即返回false)目标对象
+的该属性。
+
+值得注意的是，has方法拦截的是HasProperty操作，而不是HasOwnProperty操作，即
+has方法不判断一个属性是对象自身的属性，还是继承的属性。
+
+另外，虽然for...in循环也用到了in运算符，但是has拦截对for...in循环不生效。
+```javascript
+//13-proxy-has-forIn.js
+let stu1 = {name: 'san', score: 59};
+let stu2 = {name: 'si', score: 99};
+
+let handler = {
+    has(target, prop) {
+        if(prop === 'score' && target[prop] < 60) {
+            console.log(`${target.name}不及格`);
+            return false;
+        }
+        return prop in target;
+    }
+}
+
+let oproxy1 = new Proxy(stu1, handler);
+let oproxy2 = new Proxy(stu2, handler);
+
+console.log('score' in oproxy1);
+//san不及格
+//false
+
+console.log('score' in oproxy2);
+//true
+
+for(let a in oproxy1){
+    console.log(oproxy1[a]);
+}
+//san
+//59
+```
+上面代码中，has拦截只对in循环生效，对for...in循环不生效，导致不符合要求的属性
+没有被排除在for...in循环之外。
+
+## construct()
+construct方法用于拦截new命令，下面是拦截对象的写法。
+
+```javascript
+var handler = {
+    construct (target, args) {
+        return new targrt(...args);
+    }
+}
+```
+construct方法可以接受两个参数。
+* target: 目标对象
+* args: 构建函数的参数对象
 
 
 
