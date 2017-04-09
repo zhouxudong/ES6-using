@@ -520,6 +520,22 @@ construct方法可以接受两个参数。
 * target: 目标对象
 * args: 构建函数的参数对象
 
+```javascript
+//14-proxy-construct
+var p = new Proxy(function(){}, {
+    construct: function (target, args) {
+        console.log('called: ' + args.join(', '));
+        return {value: args[0] * 10}
+    }
+});
+
+console.log(new p(1));
+//called: 1
+// {value: 10}
+```
+construct方法返回的必须是一个对象，否则会报错。
+
+
 
 
 
