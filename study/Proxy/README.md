@@ -248,6 +248,131 @@ function createArray(...elements) {
 let arr = createArray('a', 'b', 'c');
 console.log(arr[-1]);   //c
 ```
+上面代码中，数组的位置参数是-1，就会输出数组的倒数最后一个成员。
+
+利用Proxy，可以将读取属性的操作(get)，转变为执行某个函数，从而实现属性
+的链式操作。
+
+```javascript
+//06-proxy-get-chain.js
+var gol = {
+    double: n => n * 2,
+    pow: n => n * n,
+    reverseInt: n => n.toString().split("").reverse().join("") | 0
+
+};
+
+var pipe = (function(){
+    return function (value) {
+        var funcStack = [];
+        var oproxy = new Proxy({}, {
+            get: function( pipeObject, fnName) {
+                if(fnName === 'get') {
+                    return funcStack.reduce(function (val, fn) {
+                        return fn(val);
+                    },value);
+                }
+                funcStack.push(gol[fnName]);
+                return oproxy;
+            }
+        })
+        return oproxy;
+    }
+}());
+
+console.log(pipe(3).double.pow.reverseInt.get);//63
+```
+上面代码设置Proxy以后，达到了将函数名链式使用的效果。
+
+如果一个属性不可配置（configurable)和不可写（writable),则该属性不能被代理，
+通过Proxy对象访问该属性会报错。
+```javascript
+const target = Object.defineProperties({}, {
+    foo: {
+        value: 123,
+        writable: false,
+        configurable: false
+    }
+})
+
+const handler = {
+    get(target, propKey) {
+        return 'abc';
+    }
+};
+const proxy = new Proxy(target, handler);
+
+proxy.foo
+//TypeError: Invariant check failed
+```
+
+## set()
+set方法用来拦截某个属性的赋值操作。
+
+假定Person对象有一个age属性，该属性应该是一个不大于200的整数，那么可以使用Proxy保证age的属性值符合要求。
+
+```javascript
+//07-proxy-set.js
+var validator = {
+    set: function (obj, prop, value) {
+        if(prop === 'age') {
+            if(!Number.isInteger(value)) {
+                throw new TypeError('The age is not an integer')
+            }
+            if(value > 200) {
+                throw new RangeError('The age seems invalid');
+            }
+        }
+        //对于age以外的属性，直接保存
+        obj[prop] = value;
+    }
+}
+
+let person = new Proxy({}, validator);
+
+person.age = 100;
+
+console.log(person.age);
+person.age = 'aaa'; //TypeError
+parson.age = 300;   //RangeError
+```
+
+上面代码中，由于设置了存值函数set， 任何不符合要求的age属性赋值，都会抛出一个错误，
+这是数据验证的一种实现方法。利用set方法，还可以数据绑定，即每当对象发生变化时，会
+自动更新DOM。
+
+有时，我们会在对象上面设置内部属性，属性名的第一个字符使用下划线开头，表示这个属性不因该
+被外部使用。结合get和set方法，就可以做到防止这些内部属性被外部读写。
+
+```javascript
+//08-proxy-set-private.js
+var handler = {
+    get(target, key){
+        invariant(key, 'get');
+        return target[key];
+    },
+    set(target, key, value){
+        invariant(key, 'set');
+        target[key] = value;
+        return true;
+    }
+};
+function invariant(key, action) {
+    if(key[0] === '_') {
+        throw new Error(`Invalid attempt to ${action} private "${key}" property`)
+    }
+}
+var target = {};
+var proxy = new Proxy(target, handler);
+
+proxy._prop = 'c'
+//Error: Invalid attempt to set private "_prop" property
+proxy._prop
+//Error: Invalid attempt to get private "_prop" property
+```
+上面代码中，只要读写的属性名的第一个字符是下划线，一律抛错，从而达到禁止读写内部属性。
+
+如果目标对象自身的某个属性，不可写也不可配置，那么set不得改变这个属性的值，只能返回同样的值。
 
 
 
