@@ -375,6 +375,58 @@ proxy._prop
 如果目标对象自身的某个属性，不可写也不可配置，那么set不得改变这个属性的值，只能返回同样的值。
 
 
+## apply()
+apply方法拦截函数的调用、call和apply操作。
+
+apply方法可以接受三个参数，分别是目标对象、目标对象的上下文对象（this)和目标对象的参数数组。
+
+```javascript
+var handler = {
+    apply(target, ctx, args){
+        return Reflect.apply(...arguments);
+    }
+}
+```
+下面是一个例子
+```javascript
+//09-proxy-apply.js
+var target = function () {
+    return 'I am the target';
+}
+var handler = {
+    apply: function () {
+        return 'I am the proxy';
+    }
+}
+var p = new Proxy(target, handler);
+console.log(p())
+//I am the proxy
+```
+上面代码中，变量p是Proxy的实例，当它作为函数调用时（ p() )，就会被apply方法
+拦截，返回一个字符串。
+
+```javascript
+//10-proxy-apply.js
+var twice = {
+    apply(target, ctx, args) {
+        return Reflect.apply(...arguments) * 2;
+    }
+};
+
+function sum(num1, num2) {
+    return num1 + num2;
+};
+
+var proxy = new Proxy(sum, twice);
+
+console.log(proxy(1,2));    //6
+console.log(proxy.call(null, 5,6)); //22
+console.log(proxy.apply(null, [7,8]));  //30
+console.log(Reflect.apply(proxy, null, [9,10]));    //38
+```
+上面代码中，每当执行proxy函数（直接调用或call或apply调用),就会被apply方法拦截。
+
+
 
 
 
