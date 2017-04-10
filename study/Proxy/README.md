@@ -632,6 +632,169 @@ Object.getPrototypeOf(p) === proto  //true
 注意，getPrototypeOf方法的返回值必须是对象或者null，否则报错。另外，如果目标
 对象不可扩展，getPrototypeOf方法必须返沪目标对象的原型对象。
 
+## isExtensible()
+isExtensible方法拦截Object.isExtensible操作。
+
+```javascript
+//19-proxy-isExtensible.js
+var p = new Proxy({}, {
+    isExtensible(target) {
+        console.log('called');
+        return true;
+    }
+});
+Object.isExtensible(p);
+//called
+//true
+```
+上面代码设置了isExtensible,在调用Object.isExtensible时会输出called。
+
+注意，该方法只能返回布尔值，否则返回值会被自动转为布尔值。
+
+这个方法有一个强限制，它的返回值必须与目标对象的isExtensible属性保持一致，否则
+就会抛出错误。
+
+```javascript
+var p = new Proxy({}, {
+    isExtensible: function(target) {
+        return false;
+    }
+});
+
+Object.isExtensible(p)      //报错
+```
+
+## ownKeys()
+
+ownKeys方法用来拦截对象自身属性的读取操作。具体来说，拦截以下操作。
+
+* Object.getOwnPropertyNames()
+* Object.getOwnPropertySymbols()
+* Object.keys()
+
+下面是拦截Object.keys()的例子
+```javascript
+//20-proxy-ownKeys.js
+var target = {
+    a: 1,
+    b: 2,
+    c: 3
+};
+
+var handler = {
+    ownKeys(target) {
+        return ['a']
+    }
+};
+
+var proxy = new Proxy(target, handler);
+console.log(Object.keys(proxy))
+// [ 'a' ]
+```
+上面代码拦截了对于target对象的Object.keys()操作，只返回a、b、c三个属性之中的a属性。
+
+下面例子拦截第一个字符为下划线的属性名。
+
+```javascript
+//20-proxy-ownKeys.js
+var target = {
+    _bar: 'foo',
+    _prop: 'bar',
+    prop: 'aaaa'
+}
+
+var handler = {
+    ownKeys(target) {
+        return Reflect.ownKeys(target).filter(key => key[0] !== '_');
+    }
+};
+
+var proxy = new Proxy(target, handler);
+
+for(let key of Object.keys(proxy)) {
+    console.log(target[key]);
+}
+//aaaa
+```
+
+注意，使用Object.keys方法时，有三类属性会被ownkeys方法自动过滤，不会返回。
+
+* 目标对象上不存在属性
+* 属性名为Symbol值
+* 不可遍历（enumerable)的属性
+
+```javascript
+//21-proxy-ownKeys-noUse.js
+var target = {
+    a: 1,
+    b: 2,
+    c: 3,
+    [Symbol.for('secret')]: '4',
+};
+
+Object.defineProperty(target, 'key', {
+    configurable: true,
+    enumerable: false,
+    writable: true,
+    value: 'static'
+});
+
+var handler = {
+    ownKeys(target) {
+        return ['a', 'd', Symbol.for('secret'), 'key'];
+    }
+};
+
+var proxy = new Proxy(target, handler);
+console.log(Object.keys(proxy));
+// [ 'a' ]
+```
+上面代码中，ownKeys方法之中，显示返回不存在的属性（ d )、Symbol值、
+不可遍历属性，结果都被自动过滤掉。
+
+ownKeys方法还可以拦截Object.getOwnPropertyNames()。
+```javascript
+var p = new Proxy({}, {
+    ownKeys(target) {
+        return ['a', 'b', 'c'];
+    }
+})
+
+Object.getOwnPropertyNames(p);
+// [ 'a', 'b', 'c' ]
+```
+
+ownKeys方法返回的数组成员，只能是字符串或Symbol值。如果有其他类型的值，
+或者返回的根本不是数组，就会报错。
+
+如果目标对象自身包含不可配置属性，则该属性必须被ownKeys方法返回，否则报错。
+
+另外，如果目标对象是不可扩展的，这是ownkey方法返回的数组之中，必须包含原
+对象的所有属性，且不能包含多余的属性，否则报错。
+```javascript
+var obj = {
+    a: 1
+};
+Object.preventExtensions(obj);
+var p = new Proxy(obj, {
+    ownKeys(target){
+        return ['a', 'b'];
+    }
+})
+
+Object.getOwnPropertyNames(p);
+//TypeError: 'ownKeys' on proxy: trap returned extra keys but proxy target is non-extensible
+```
+上面代码中，Obj对象是不可扩展的，这是ownKeys方法返回的数组中，包含了obj对象的多余属性b,导致报错。
+
+## preventExtensions()
+
+preventExtensions方法拦截Object.preventExtensions()。该方法必须返回一个布尔值，
+否则会被自动转为布尔值。
+
+这个方法有一个限制，只有目标对象不可扩展时（即Object.isExtensible(proxy)为false),
+proxy.preventExtensions才能返回true,否则会报错。
+
 
 
 
