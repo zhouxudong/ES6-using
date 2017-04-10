@@ -562,6 +562,49 @@ delete proxy._prop
 
 注意，目标对象自身的不可配置的属性，不能被deleteProperty方法删除，否则报错。
 
+## defineProperty()
+defineProperty方法拦截了Object.defineProperty操作
+```javascript
+var handler = {
+    defineProperty(target, key, descriptor) {
+        return target[key];
+    }
+};
+var target = {};
+var proxy = new Proxy(target, handler);
+
+proxy.foo = 'bar';
+console.log(proxy.foo);
+//undefined
+```
+
+## getOwnPropertyDescriptor()
+
+getOwnPropertyDescriptor方法拦截Object.getOwnPropertyDescriptor(),返回一个
+属性描述对象或者undefined.
+```javascript
+//17-proxy-getOwnProDes.js
+var handler = {
+    getOwnPropertyDescriptor(target, key) {
+        if(key[0] === '_') {
+            return;
+        }
+        return Object.getOwnPropertyDescriptor(target, key);
+    }
+};
+var target = { _foo: 'bar', baz: 'tar' };
+var proxy = new Proxy(target, handler);
+
+console.log(Object.getOwnPropertyDescriptor(proxy, 'wat'));
+//undefined
+console.log(Object.getOwnPropertyDescriptor(proxy, '_foo'));
+//undefined
+console.log(Object.getOwnPropertyDescriptor(proxy, 'baz'));
+// { value: 'tar', writable: true, enumerable: true, configurable: true }
+```
+上面代码中，handler.getOwnPropertyDescriptor方法对于第一个字符为下划线的属性名
+会返回undefined。
+
 
 
 
