@@ -606,6 +606,34 @@ console.log(Object.getOwnPropertyDescriptor(proxy, 'baz'));
 会返回undefined。
 
 
+## getPrototypeOf()
+
+getPrototypeOf方法主要用来拦截获取对象原型。具体来说，拦截下面这些操作。
+
+* Object.prototype.__proto__
+* Object.prototype.isPrototypeOf()
+* Object.getPrototypeOf()
+* Reflect.getPrototypeOf()
+* instanceof
+
+下面是一个例子
+```javascript
+//18-proxy-getPrototypeOf.js
+var proto = {};
+var p = new Proxy({}, {
+    getPrototypeOf(target) {
+        return proto;
+    }
+})
+Object.getPrototypeOf(p) === proto  //true
+```
+上面代码中，getPrototypeOf方法拦截Object.getPrototypeOf(),返回proto对象。
+
+注意，getPrototypeOf方法的返回值必须是对象或者null，否则报错。另外，如果目标
+对象不可扩展，getPrototypeOf方法必须返沪目标对象的原型对象。
+
+
+
 
 
 
