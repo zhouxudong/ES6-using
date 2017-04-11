@@ -795,7 +795,165 @@ preventExtensions方法拦截Object.preventExtensions()。该方法必须返回�
 这个方法有一个限制，只有目标对象不可扩展时（即Object.isExtensible(proxy)为false),
 proxy.preventExtensions才能返回true,否则会报错。
 
+为了防止出现这个问题，通常要在proxy.preventExtensions方法里面，调用一次Object.preventExtensions。
 
+```javascript
+var p = new Proxy({}, {
+    preventExtensions(target){
+        console.log('called');
+        Object.preventExtensions(target);
+        return true;
+    }
+});
+
+console.log(Object.preventExtensions(p));
+```
+
+## setPrototypeOf()
+
+setPrototypeOf方法主要用来拦截Object.setPrototypeOf方法。
+
+下面是一个例子
+```javascript
+var handler = {
+    setPrototypeOf(target, proto) {
+        throw new Error('Changing the prototype is forbidden');
+    }
+}
+var proto = {};
+var target = function() {};
+var proxy = new Proxy(target, handler);
+Object.setPrototypeOf(proxy, proto);
+// Error: Changing the prototype is forbidden
+```
+上面代码中，只要修改target的原型对象，就会报错。
+
+注意，该方法只能返回布尔值，否则会被自动转为布尔值。另外，如果目标对象不可
+扩展，setPrototypeOf方法不得改变目标对象的原型。
+
+## Proxy.revocable
+
+Proxy.revocable方法返回一个可取消的Proxy实例。
+```javascript
+var target = {};
+var handler = {};
+
+var {proxy, revoke} = Proxy.revocable(target, handler);
+
+proxy.foo = 123;
+proxy.foo   //123
+
+revoke();
+proxy.foo   //TypeError: Revoked
+```
+
+Proxy.revocable方法返回一个对象，该对象的proxy属性是Proxy实例，revoke属性是
+一个函数，可以取消Proxy实例。上面代码中，当执行revoke函数之后，再访问Proxy实例，
+就会抛出一个错误。
+
+Proxy.revocable的一个使用场景是，目标对象不允许直接访问，必须通过代理访问，一旦
+访问结束，就收回代理权，不允许再次访问。
+
+## this问题
+
+虽然Proxy可以代理针对目标对象的访问，但它不是目标对象的透明代理，即不做任何拦截的情况下，
+也无法保证与目标对象的行为一致。主要原因就是在Proxy代理的情况下，目标对象内部的this关键字
+会指向Proxy代理。
+
+```javascript
+//23-proxy-this.js
+const target = {
+    m: function () {
+        console.log(this === proxy);
+    }
+}
+const handler = {};
+
+const proxy = new Proxy(target, handler);
+
+console.log(target.m());    //false
+console.log(proxy.m());     //true
+```
+上面代码中，一旦proxy代理target.m,后者内部的this就是指向proxy,而不是target.
+
+下面是一个例子，由于this指向的变化，导致Proxy无法代理目标对象。
+```javascript
+const _name = new WeakMap();
+
+class Person {
+    constructor(name) {
+        _name.set(this, name);
+    }
+
+    get name() {
+        return _name.get(this);
+    }
+}
+
+const jane = new Person('Jane');
+console.log(jane.name); //Jane
+
+const proxy = new Proxy(jane, {});
+console.log(proxy.name);    //undefined
+```
+上面代码中，目标对象jane的name属性，实际保存在外部WeakMap对象_name上面，通过this
+区分。由于通过proxy.name访问是，this指向proxy，导致无法取到值，所以返回undefined。
+
+此外，有些原生对象的内部属性，只有通过正确的this才能拿到，所以Proxy也无法代理这些
+原生对象的属性。
+
+```javascript
+const target = new Date();
+const handler = {};
+const proxy = new Proxy(target, handler);
+
+proxy.getDate();
+//TypeError: this is not Date object.
+```
+
+上面代码中，getDate方法只能在Date对象实例上面拿到，如果this不是Date对象实例就会报错。
+这时，this绑定原始对象，就可以解决这个问题。
+
+```javascript
+const target = new Date();
+const handler = {
+    get(target, prop) {
+        if(prop === 'getDate') {
+            return target.getDate.bind(target);
+        }
+        return Reflect.get(target, prop);
+    }
+};
+const proxy = new Proxy(target, handler);
+
+proxy.getDate();    //1
+```
+
+## 实例： Web服务的客户端
+
+Proxy对象可以拦截目标对象的任意属性，这使得它很合适用来写Web服务的客户端。
+
+```javascript
+const service = createWebService('http://example.com/data');
+
+service.employees().then(json => {
+    const employees = JSON.parse(json);
+    //...
+})
+```
+上面代码新建了一个Web服务的接口，这个接口返回各种数据。Proxy可以拦截这个对象的
+任意属性，所以不用为每一种数据写一个适配方法，只要写一个Proxy拦截就可以了。
+
+```javascript
+function createWebService(baseUrl) {
+    return new Proxy({}, {
+        get(target, propKey, receiver) {
+            return () => httpGet(baseUrl + '/' + propKey);
+        }
+    })
+}
+```
+同理，Proxy也可以用来实现数据库的ORM层。
 
 
 
